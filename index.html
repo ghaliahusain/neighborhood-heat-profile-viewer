@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kuwait Neighborhoods</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <!-- Your CSS (paste from CodePen CSS) -->
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+html, body { margin: 0; height: 100%; }
+
+#layout{
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 46% 54%;
+}
+
+#map{ height: 100%; width: 100%; }
+
+/* greyscale satellite */
+.leaflet-tile-pane{
+  filter: grayscale(1) brightness(0.85);
+}
+
+/* Right panel */
+#panel{
+  padding: 28px 28px 22px;
+  font-family: 'Montserrat', sans-serif;
+  background: #fff;
+  overflow: auto;
+}
+
+#panel h1{
+  margin: 0 0 18px;
+  font-size: 34px;
+  letter-spacing: -0.5px;
+}
+
+/* Basic meta rows */
+.meta > div{
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 15px;
+}
+
+.k{ color: #222; font-weight: 700; }
+.v{ color: #222; font-weight: 500; }
+
+.sub{
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+hr{
+  border: none;
+  border-top: 1px solid #e5e5e5;
+  margin: 14px 0;
+}
+
+.secTitle{
+  margin: 6px 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: #444;
+}
+
+.hint{
+  margin-top: 14px;
+  font-size: 13px;
+  color: #777;
+}
+
+/* =======================
+   LST Above/Below grid
+======================= */
+.lstGrid{
+  display: grid;
+  grid-template-columns: 1fr 90px 90px;
+  gap: 10px 10px;
+  align-items: center;
+}
+
+.lstHead{
+  font-size: 12px;
+  color: #666;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lstRow{ display: contents; }
+
+.lstLabel{
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+
+.lstVal{
+  font-weight: 800;
+  margin-left: 8px;
+}
+
+.cell{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bullet{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid #ddd;
+}
+.bullet.on{
+  background: #ff3a3a;
+  border-color: #ff3a3a;
+}
+
+/* =======================
+   NEW: Chart
+======================= */
+.chartWrap{
+  width: 100%;
+  height: 260px;
+  margin: 6px 0 4px;
+}
+#slopeChart{
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =======================
+   Indicators layout
+======================= */
+#numIndicators, #catIndicators{
+  display: grid;
+  gap: 14px;
+}
+
+.indicatorNum, .indicatorCat{
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.left .abbr{
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.left .eq{ font-weight: 600; color:#888; margin: 0 4px; }
+.left .val{ font-weight: 800; }
+.left .unit{ color:#777; font-weight: 600; margin-left: 6px; }
+
+.left .full{
+  font-size: 12px;
+  color: #444;
+  margin-top: 4px;
+}
+
+/* bullet scale */
+.track{
+  position: relative;
+  height: 22px;
+}
+
+.track .minmax{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #888;
+  pointer-events: none;
+}
+
+.track .bar{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10px;
+  height: 2px;
+  background: #dcdcdc;
+}
+
+.track .marker{
+  position: absolute;
+  top: 6px;
+  width: 11px;
+  height: 11px;
+  background: #ff3a3a;
+  transform: translateX(-50%);
+}
+
+/* categorical options */
+.options{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.opt{
+  padding: 6px 10px;
+  border: 1px solid #e3e3e3;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #333;
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.opt.active{
+  border-color: #ff3a3a;
+  background: rgba(255,58,58,0.12);
+  color: #111;
+}
+
+  </style>
+</head>
+
+<body>
+  <!-- Your HTML (paste from CodePen HTML body ONLY) -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<div id="layout">
+  <div id="map"></div>
+
+  <div id="panel">
+    <h1>Kuwait Residential Neighborhoods</h1>
+
+    <!-- META -->
+    <div class="meta">
+      <div>
+        <span class="k">Name</span>
+        <span id="iName" class="v">—</span>
+      </div>
+
+      <div>
+        <span class="k">LCZ</span>
+        <span class="v">
+          <span id="iLCZ">—</span>
+          <span id="iLCZDesc" class="sub">—</span>
+        </span>
+      </div>
+
+      <div>
+        <span class="k">Type</span>
+        <span id="iType" class="v">—</span>
+      </div>
+    </div>
+
+    <hr />
+
+    <!-- LST with Above/Below columns -->
+    <div class="lstGrid">
+      <div class="lstHead"></div>
+      <div class="lstHead">Above avg</div>
+      <div class="lstHead">Below avg</div>
+
+      <div class="lstRow">
+        <div class="lstLabel">
+          Mean Day LST <span id="iDay" class="lstVal">—</span>
+        </div>
+        <div class="cell"><span id="bDayAbove" class="bullet"></span></div>
+        <div class="cell"><span id="bDayBelow" class="bullet"></span></div>
+      </div>
+
+      <div class="lstRow">
+        <div class="lstLabel">
+          Mean Night LST <span id="iNight" class="lstVal">—</span>
+        </div>
+        <div class="cell"><span id="bNightAbove" class="bullet"></span></div>
+        <div class="cell"><span id="bNightBelow" class="bullet"></span></div>
+      </div>
+
+      <div class="lstRow">
+        <div class="lstLabel">
+          Mean Amplitude LST <span id="iAmp" class="lstVal">—</span>
+        </div>
+        <div class="cell"><span id="bAmpAbove" class="bullet"></span></div>
+        <div class="cell"><span id="bAmpBelow" class="bullet"></span></div>
+      </div>
+    </div>
+
+    <hr />
+
+    <!-- SLOPES -->
+    <div class="meta">
+      <div><span class="k">Day Slope / Decade</span><span id="iDaySlope" class="v">—</span></div>
+      <div><span class="k">Night Slope / Decade</span><span id="iNightSlope" class="v">—</span></div>
+      <div><span class="k">Amplitude Slope / Decade</span><span id="iAmplitudeSlope" class="v">—</span></div>
+    </div>
+
+    <hr />
+
+    <!-- NEW: SLOPE CHART -->
+    <h2 class="secTitle">Slope per decade (ranked)</h2>
+    <div class="chartWrap">
+      <canvas id="slopeChart"></canvas>
+    </div>
+
+    <hr />
+
+    <!-- NUMERICAL indicators -->
+    <h2 class="secTitle">Numerical indicators</h2>
+    <div id="numIndicators">
+      <div class="indicatorNum" data-key="SL" data-min="13.46" data-max="1261.12">
+        <div class="left">
+          <div class="abbr">SL <span class="eq">=</span> <span class="val">—</span> <span class="unit">km²</span></div>
+          <div class="full">Total Street Length</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="CAO_E-W" data-min="0.02" data-max="0.68">
+        <div class="left">
+          <div class="abbr">CAO E–W <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">East–West Orientation</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="CAO_N-S" data-min="0.02" data-max="0.68">
+        <div class="left">
+          <div class="abbr">CAO N–S <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">North–South Orientation</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="CAO_NE-SW" data-min="0.02" data-max="0.68">
+        <div class="left">
+          <div class="abbr">CAO NE–SW <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">Northeast–Southwest Orientation</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="CAO_NW-SE" data-min="0.02" data-max="0.68">
+        <div class="left">
+          <div class="abbr">CAO NW–SE <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">Northwest–Southeast Orientation</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="RD" data-min="11.69" data-max="34.94">
+        <div class="left">
+          <div class="abbr">RD <span class="eq">=</span> <span class="val">—</span> <span class="unit">km/km²</span></div>
+          <div class="full">Road Density</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="BCR" data-min="0.00" data-max="0.31">
+        <div class="left">
+          <div class="abbr">BCR <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">Building Coverage Ratio</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="NDBI" data-min="-0.03" data-max="0.08">
+        <div class="left">
+          <div class="abbr">NDBI <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">Normalized Difference Built Index</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="NDVI" data-min="0.04" data-max="0.20">
+        <div class="left">
+          <div class="abbr">NDVI <span class="eq">=</span> <span class="val">—</span></div>
+          <div class="full">Normalized Difference Vegetation Index</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+
+      <div class="indicatorNum" data-key="AGS" data-min="0" data-max="590443.02">
+        <div class="left">
+          <div class="abbr">AGS <span class="eq">=</span> <span class="val">—</span> <span class="unit">m²</span></div>
+          <div class="full">Greenspace Area</div>
+        </div>
+        <div class="track">
+          <div class="minmax"><span class="min">—</span><span class="max">—</span></div>
+          <div class="bar"></div><div class="marker"></div>
+        </div>
+      </div>
+    </div>
+
+    <hr />
+
+    <!-- CATEGORICAL indicators -->
+    <h2 class="secTitle">Categorical indicators</h2>
+    <div id="catIndicators">
+      <div class="indicatorCat" data-key="H_W">
+        <div class="left">
+          <div class="abbr">H/W</div>
+          <div class="full">Aspect Ratio</div>
+        </div>
+        <div class="options">
+          <div class="opt" data-min="-999999" data-max="0.10">&lt; 0.1</div>
+          <div class="opt" data-min="0.30" data-max="1.25">0.30–1.25</div>
+          <div class="opt" data-min="0.75" data-max="2.00">0.75–2.00</div>
+          <div class="opt" data-min="1.00" data-max="2.00">1.00–2.00</div>
+        </div>
+      </div>
+
+      <div class="indicatorCat" data-key="PA">
+        <div class="left">
+          <div class="abbr">PA</div>
+          <div class="full">Plot Area (m²)</div>
+        </div>
+        <div class="options">
+          <div class="opt" data-min="250" data-max="349">250–349</div>
+          <div class="opt" data-min="350" data-max="400">350–400</div>
+          <div class="opt" data-min="401" data-max="999999">≥401</div>
+        </div>
+      </div>
+
+      <div class="indicatorCat" data-key="MBH">
+        <div class="left">
+          <div class="abbr">MBH</div>
+          <div class="full">Mean Building Height (m)</div>
+        </div>
+        <div class="options">
+          <div class="opt" data-min="2" data-max="10">2–10</div>
+          <div class="opt" data-min="10" data-max="25">10–25</div>
+          <div class="opt" data-min="25.0000001" data-max="999999">&gt;25</div>
+        </div>
+      </div>
+
+      <div class="indicatorCat" data-key="SVF">
+        <div class="left">
+          <div class="abbr">SVF</div>
+          <div class="full">Sky View Factor</div>
+        </div>
+        <div class="options">
+          <div class="opt" data-min="0.20" data-max="0.50">0.20–0.50</div>
+          <div class="opt" data-min="0.50" data-max="0.80">0.50–0.80</div>
+          <div class="opt" data-min="0.60" data-max="0.90">0.60–0.90</div>
+          <div class="opt" data-min="0.90" data-max="999999">&gt;0.90</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint">Click a neighborhood to update values and highlight it.</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Your JS (paste from CodePen JS) -->
+  <script>
+// =======================
+// FULL WORKING JS (CodePen)
+// Map + Panel updates + Numeric tracks + Categorical highlights
+// + Ranked stacked slope chart (all grey, selected highlighted)
+// Legend shows fixed colors:
+// Day = #ff3a3b, Night = #a2a6ef, Amplitude = #ffc064
+// =======================
+
+// =======================
+// 0) CONFIG
+// =======================
+const GEOJSON_URL =
+  "https://raw.githubusercontent.com/ghaliak523-cmd/kuwait-neighborhoods/main/neighborhoods.geojson";
+
+const COLORS = {
+  grey: "rgba(180,180,180,0.65)",
+  day: "#ff3a3b",
+  night: "#a2a6ef",
+  amp: "#ffc064",
+};
+
+// =======================
+// 1) MAP
+// =======================
+const map = L.map("map").setView([29.35, 47.95], 10);
+
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19 }
+).addTo(map);
+
+// =======================
+// 2) STATE
+// =======================
+let geoLayer = null;
+let selectedLayer = null;
+
+let slopeChart = null;
+let slopeIndexByName = new Map(); // name -> index in chart labels
+
+// =======================
+// 3) LCZ DESCRIPTORS
+// =======================
+const LCZ_DESC = {
+  "2": "Compact Mid-Rise",
+  "5": "Open Mid-Rise",
+  "6": "Open Low-Rise",
+  "7": "Lightweight Low-Rise",
+  "F": "Bare Soil or Sand",
+  "f": "Bare Soil or Sand",
+};
+
+// =======================
+// 4) LOAD GEOJSON
+// =======================
+fetch(GEOJSON_URL)
+  .then((r) => r.json())
+  .then((data) => {
+    geoLayer = L.geoJSON(data, {
+      style: {
+        fillColor: "#000",
+        fillOpacity: 0.85,
+        color: "#fff",
+        weight: 1,
+      },
+      onEachFeature: (feature, layer) => {
+        layer.on("click", () => selectNeighborhood(feature, layer));
+      },
+    }).addTo(map);
+
+    map.fitBounds(geoLayer.getBounds(), { padding: [20, 20] });
+
+    // init slope chart from all neighborhoods
+    initSlopeChartFromGeoJSON(data);
+  })
+  .catch((err) => console.error("GeoJSON load error:", err));
+
+// =======================
+// 5) CLICK → UPDATE PANEL
+// =======================
+function selectNeighborhood(feature, layer) {
+  if (selectedLayer) {
+    selectedLayer.setStyle({
+      fillColor: "#000",
+      fillOpacity: 0.85,
+      color: "#fff",
+      weight: 1,
+    });
+  }
+
+  selectedLayer = layer;
+  selectedLayer.setStyle({ color: "#ff3a3a", weight: 3 });
+
+  const p = feature.properties || {};
+
+  // Name, LCZ, Type
+  setText("iName", p.Name);
+  setText("iLCZ", p.LCZ);
+  setText("iType", p.Type);
+
+  const lczKey = String(p.LCZ ?? "").trim();
+  setText("iLCZDesc", LCZ_DESC[lczKey] || "—");
+
+  // Mean LST
+  setText("iDay", fmt(p.DayLST));
+  setText("iNight", fmt(p.NightLST));
+  setText("iAmp", fmt(p.AmplitudeLST));
+
+  // Slopes
+  setText("iDaySlope", fmt(p.DaySlope));
+  setText("iNightSlope", fmt(p.NightSlope));
+  setText("iAmplitudeSlope", fmt(p.AmplitudeSlope));
+
+  // Above/Below bullets
+  setAboveBelow(p.Day, "bDayAbove", "bDayBelow");
+  setAboveBelow(p.Night, "bNightAbove", "bNightBelow");
+  setAboveBelow(p.Amplitude, "bAmpAbove", "bAmpBelow");
+
+  // Numerical indicators
+  updateNumericIndicators(p);
+
+  // Categorical indicators
+  updateCategoricalIndicators(p);
+
+  // NEW: highlight selected in ranked stacked slope chart
+  highlightSlopeBarByName(p.Name);
+}
+
+// =======================
+// 6) HELPERS
+// =======================
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent =
+    value === null || value === undefined || value === "" ? "—" : value;
+}
+
+function fmt(value, decimals = 2) {
+  if (value === null || value === undefined) return "—";
+  let s = String(value).trim();
+  if (
+    s === "" ||
+    s === "-" ||
+    s.toLowerCase() === "na" ||
+    s.toLowerCase() === "nan"
+  ) {
+    return "—";
+  }
+  s = s.replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n.toFixed(decimals) : "—";
+}
+
+function num(value) {
+  if (value === null || value === undefined) return NaN;
+  let s = String(value).trim();
+  if (
+    s === "" ||
+    s === "-" ||
+    s.toLowerCase() === "na" ||
+    s.toLowerCase() === "nan"
+  )
+    return NaN;
+  s = s.replace(",", ".");
+  return Number(s);
+}
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+function pct(v, lo, hi) {
+  if (hi === lo) return 0.5;
+  return (v - lo) / (hi - lo);
+}
+
+// robust property lookup (handles keys like "H/W")
+function getPropFlexible(props, desiredKey) {
+  if (!props) return undefined;
+  if (desiredKey in props) return props[desiredKey];
+
+  const normKey = (k) =>
+    String(k)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[–—]/g, "-")
+      .replace(/≥/g, ">=");
+
+  const target = normKey(desiredKey);
+  for (const k of Object.keys(props)) {
+    if (normKey(k) === target) return props[k];
+  }
+  return undefined;
+}
+
+// =======================
+// 7) ABOVE / BELOW BULLETS
+// =======================
+function setAboveBelow(value, aboveId, belowId) {
+  const a = document.getElementById(aboveId);
+  const b = document.getElementById(belowId);
+  if (!a || !b) return;
+
+  a.classList.remove("on");
+  b.classList.remove("on");
+
+  const s = String(value ?? "").toLowerCase().trim();
+  if (s.includes("above")) a.classList.add("on");
+  if (s.includes("below")) b.classList.add("on");
+}
+
+// =======================
+// 8) NUMERICAL INDICATORS
+// =======================
+function updateNumericIndicators(props) {
+  document.querySelectorAll(".indicatorNum").forEach((row) => {
+    const key = row.dataset.key;
+    const min = Number(row.dataset.min);
+    const max = Number(row.dataset.max);
+
+    const raw = getPropFlexible(props, key);
+    const v = num(raw);
+
+    // value
+    const valEl = row.querySelector(".val");
+    if (valEl) valEl.textContent = Number.isFinite(v) ? fmt(v) : "—";
+
+    // min/max labels
+    const minEl = row.querySelector(".min");
+    const maxEl = row.querySelector(".max");
+    if (minEl) minEl.textContent = Number.isFinite(min) ? fmt(min).replace(/\.00$/, "") : "—";
+    if (maxEl) maxEl.textContent = Number.isFinite(max) ? fmt(max).replace(/\.00$/, "") : "—";
+
+    // marker
+    const marker = row.querySelector(".marker");
+    if (!marker) return;
+
+    if (
+      !Number.isFinite(v) ||
+      !Number.isFinite(min) ||
+      !Number.isFinite(max) ||
+      max === min
+    ) {
+      marker.style.left = "0%";
+      marker.style.opacity = "0.25";
+      return;
+    }
+
+    marker.style.opacity = "1";
+    const vClamped = clamp(v, min, max);
+    marker.style.left = `${pct(vClamped, min, max) * 100}%`;
+  });
+}
+
+// =======================
+// 9) CATEGORICAL INDICATORS
+// =======================
+const CAT_KEY_ALIASES = {
+  H_W: "H/W",
+  PA: "PA",
+  MBH: "MBH",
+  SVF: "SVF",
+};
+
+// returns { kind:"value", value:Number } OR { kind:"range", min, max } OR null
+function parseCat(raw) {
+  if (raw === null || raw === undefined) return null;
+
+  let s = String(raw).trim();
+  if (!s) return null;
+
+  // numeric?
+  const asNum = num(s);
+  if (Number.isFinite(asNum)) return { kind: "value", value: asNum };
+
+  // normalize for text bins
+  s = s
+    .toLowerCase()
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .replace(/≥/g, ">=")
+    .replace(/−/g, "-");
+
+  // <0.1, <=0.1, >0.90, >=401
+  let m = s.match(/^([><]=?)(-?\d+(\.\d+)?)/);
+  if (m) {
+    const op = m[1];
+    const n = Number(m[2]);
+    if (!Number.isFinite(n)) return null;
+    if (op.startsWith(">")) return { kind: "range", min: n, max: Infinity };
+    if (op.startsWith("<")) return { kind: "range", min: -Infinity, max: n };
+  }
+
+  // range: a-b
+  m = s.match(/^(-?\d+(\.\d+)?)-(-?\d+(\.\d+)?)$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[3]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return { kind: "range", min: Math.min(a, b), max: Math.max(a, b) };
+  }
+
+  return null;
+}
+
+function updateCategoricalIndicators(props) {
+  document.querySelectorAll(".indicatorCat").forEach((row) => {
+    row.querySelectorAll(".opt").forEach((opt) =>
+      opt.classList.remove("active")
+    );
+
+    const htmlKey = row.dataset.key;
+    const geoKey = CAT_KEY_ALIASES[htmlKey] || htmlKey;
+
+    const raw = getPropFlexible(props, geoKey);
+    const parsed = parseCat(raw);
+    if (!parsed) return;
+
+    const opts = Array.from(row.querySelectorAll(".opt"));
+
+    // highlight ONLY ONE match (first) to avoid overlaps
+    for (const opt of opts) {
+      const oMin = Number(opt.dataset.min);
+      const oMax = Number(opt.dataset.max);
+      if (!Number.isFinite(oMin) || !Number.isFinite(oMax)) continue;
+
+      let hit = false;
+
+      if (parsed.kind === "value") {
+        hit = parsed.value >= oMin - 1e-9 && parsed.value <= oMax + 1e-9;
+      } else {
+        // overlap test for text ranges (robust)
+        hit = parsed.max >= oMin - 1e-9 && parsed.min <= oMax + 1e-9;
+      }
+
+      if (hit) {
+        opt.classList.add("active");
+        break;
+      }
+    }
+  });
+}
+
+// =======================
+// 10) RANKED STACKED SLOPE CHART
+// =======================
+function initSlopeChartFromGeoJSON(geojson) {
+  const rows = [];
+
+  for (const f of geojson.features || []) {
+    const p = f.properties || {};
+    const name = String(p.Name ?? "").trim();
+    if (!name) continue;
+
+    const day = Number.isFinite(num(p.DaySlope)) ? num(p.DaySlope) : 0;
+    const night = Number.isFinite(num(p.NightSlope)) ? num(p.NightSlope) : 0;
+    const amp = Number.isFinite(num(p.AmplitudeSlope)) ? num(p.AmplitudeSlope) : 0;
+
+    // ranking rule: total absolute slope
+    const score = Math.abs(day) + Math.abs(night) + Math.abs(amp);
+
+    rows.push({ name, day, night, amp, score });
+  }
+
+  rows.sort((a, b) => b.score - a.score);
+
+  const labels = rows.map((r) => r.name);
+  slopeIndexByName = new Map(labels.map((n, i) => [n, i]));
+
+  const dayData = rows.map((r) => r.day);
+  const nightData = rows.map((r) => r.night);
+  const ampData = rows.map((r) => r.amp);
+
+  const greyArr = labels.map(() => COLORS.grey);
+
+  const canvas = document.getElementById("slopeChart");
+  const ctx = canvas ? canvas.getContext("2d") : null;
+  if (!ctx) return;
+
+  slopeChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "Day slope/decade", data: dayData, backgroundColor: [...greyArr], stack: "s" },
+        { label: "Night slope/decade", data: nightData, backgroundColor: [...greyArr], stack: "s" },
+        { label: "Amplitude slope/decade", data: ampData, backgroundColor: [...greyArr], stack: "s" },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            boxWidth: 10,
+            boxHeight: 10,
+            usePointStyle: true,
+            generateLabels: (chart) => {
+              const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              const forced = [COLORS.day, COLORS.night, COLORS.amp];
+
+              return original.map((item, i) => ({
+                ...item,
+                fillStyle: forced[i] || item.fillStyle,
+                strokeStyle: forced[i] || item.strokeStyle,
+                lineWidth: 0,
+              }));
+            },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (c) => `${c.dataset.label}: ${Number(c.raw).toFixed(3)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          ticks: {
+            maxRotation: 90,
+            minRotation: 90,
+            autoSkip: true,
+            maxTicksLimit: 18,
+          },
+          grid: { display: false },
+        },
+      y: {
+  stacked: true,
+  min: -1,
+  max: 4,
+  title: { display: true, text: "Slope per decade" }
+},
+      },
+    },
+  });
+}
+
+function highlightSlopeBarByName(name) {
+  if (!slopeChart) return;
+
+  const idx = slopeIndexByName.get(String(name ?? "").trim());
+
+  // reset all to grey
+  const n = slopeChart.data.labels.length;
+  const greyArr = Array.from({ length: n }, () => COLORS.grey);
+  slopeChart.data.datasets[0].backgroundColor = [...greyArr];
+  slopeChart.data.datasets[1].backgroundColor = [...greyArr];
+  slopeChart.data.datasets[2].backgroundColor = [...greyArr];
+
+  // highlight selected
+  if (idx !== undefined) {
+    slopeChart.data.datasets[0].backgroundColor[idx] = COLORS.day;
+    slopeChart.data.datasets[1].backgroundColor[idx] = COLORS.night;
+    slopeChart.data.datasets[2].backgroundColor[idx] = COLORS.amp;
+  }
+
+  slopeChart.update("none");
+}
+
+  </script>
+</body>
+</html>
